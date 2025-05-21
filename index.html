@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Kernel Acceleration Project</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        line-height: 1.6;
+        background-color: #f4f4f4;
+        color: #333;
+      }
+      header {
+        background-color: #222;
+        color: #fff;
+        padding: 1rem 2rem;
+        text-align: center;
+      }
+      main {
+        padding: 2rem;
+        max-width: 1000px;
+        margin: auto;
+        background-color: #fff;
+      }
+      h1,
+      h2 {
+        color: #222;
+      }
+      code {
+        background-color: #eee;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+      }
+      section {
+        margin-bottom: 2rem;
+      }
+      footer {
+        text-align: center;
+        padding: 1rem;
+        background-color: #222;
+        color: #fff;
+        margin-top: 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Accelerating Image Kernel Operations</h1>
+      <p>Using CUDA, OpenMP, and Hybrid Parallel Approaches</p>
+    </header>
+
+    <main>
+      <section>
+        <h2>About the Project</h2>
+        <p>
+          This project explores the acceleration of common image processing
+          tasks using three parallel computing techniques:
+          <strong>CUDA</strong> (GPU-based),
+          <strong>OpenMP</strong> (multi-threaded CPU), and a
+          <strong>Hybrid model</strong> that combines both. It aims to
+          demonstrate how parallel programming can significantly reduce
+          computation time when applying image kernels.
+        </p>
+      </section>
+
+      <section>
+        <h2>Author</h2>
+        <p>
+          <strong>Jayawardhana M.V.T.I</strong><br />Index No: EG/2020/3996<br />University
+          of Peradeniya
+        </p>
+      </section>
+
+      <section>
+        <h2>Objectives</h2>
+        <ul>
+          <li>Apply grayscale, blur, and edge detection filters to images</li>
+          <li>
+            Compare the performance of serial vs. parallel implementations
+          </li>
+          <li>
+            Demonstrate the use of CUDA, OpenMP, and hybrid computing in
+            real-world scenarios
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Implemented Image Kernels</h2>
+        <ul>
+          <li>
+            <strong>Grayscale Conversion:</strong> Converts RGB to intensity
+            values.
+          </li>
+          <li>
+            <strong>Gaussian Blur:</strong> Smooths images using a weighted
+            average convolution kernel.
+          </li>
+          <li>
+            <strong>Sobel Edge Detection:</strong> Detects horizontal and
+            vertical edges using gradient-based filters.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Approaches</h2>
+        <ul>
+          <li><strong>Serial:</strong> Basic sequential processing.</li>
+          <li>
+            <strong>CUDA:</strong> GPU-based parallelism with one thread per
+            pixel, using shared memory for tiles.
+          </li>
+          <li>
+            <strong>OpenMP:</strong> CPU multithreading to process image regions
+            or multiple images.
+          </li>
+          <li>
+            <strong>Hybrid:</strong> OpenMP distributes multiple images to
+            threads, each thread invokes CUDA kernels.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Performance Evaluation</h2>
+        <p>
+          The execution time for each method is measured and compared to the
+          serial version to demonstrate the performance gains from using
+          parallel computing techniques.
+        </p>
+      </section>
+
+      <section>
+        <h2>Project Repository</h2>
+        <p>
+          View the full source code and results on GitHub:
+          <a href="https://github.com/TheTharz/HPC-Project" target="_blank">
+            github.com/TheTharz/HPC-Project
+          </a>
+        </p>
+      </section>
+    </main>
+
+    <footer>&copy; 2025 Jayawardhana M.V.T.I – All Rights Reserved</footer>
+  </body>
+</html>
