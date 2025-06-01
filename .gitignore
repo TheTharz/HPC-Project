@@ -1,0 +1,48 @@
+# Compiled object files
+*.o
+
+# Compiled binary files
+*.out
+*.exe
+*.elf
+
+# Build directories
+/build/
+/bin/
+/obj/
+
+# Backup and temporary files
+*~
+*.swp
+*.tmp
+*.bak
+
+# Core dumps
+core
+core.*
+
+# Precompiled headers
+*.gch
+
+# Dependency files
+*.d
+
+# Logs
+*.log
+
+# IDE files (Visual Studio Code, CLion, etc.)
+.vscode/
+.idea/
+*.code-workspace
+
+# MacOS files
+.DS_Store
+
+# Generated image files (optional if you're using image processing)
+*.png
+*.jpg
+*.jpeg
+
+# Ignore generated files from stb
+stb_image.o
+stb_image_write.o
