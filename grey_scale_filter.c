@@ -6,39 +6,58 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <time.h>
+
+// Function to convert RGB image to grayscale
+uint8_t* convert_to_grayscale(unsigned char *img, int width, int height) {
+    uint8_t *gray_img = malloc(width * height);
+    if (!gray_img) {
+        return NULL;
+    }
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int idx = (y * width + x) * 3;
+            uint8_t r = img[idx];
+            uint8_t g = img[idx + 1];
+            uint8_t b = img[idx + 2];
+            gray_img[y * width + x] = (uint8_t)(0.3 * r + 0.59 * g + 0.11 * b);
+        }
+    }
+
+    return gray_img;
+}
 
 int main() {
     int width, height, channels;
-    unsigned char *img = stbi_load("images/test.jpg", &width, &height, &channels, 0);
-
-    if (img == NULL) {
+    unsigned char *img = stbi_load("images/test.jpg", &width, &height, &channels, 3);
+    if (!img) {
         printf("Failed to load image\n");
         return 1;
     }
 
-    size_t img_size = width * height * channels;
-    unsigned char *gray_img = malloc(width * height);
+    clock_t start_time = clock();
 
-    if (gray_img == NULL) {
-        printf("Failed to allocate memory\n");
+    uint8_t *gray_img = convert_to_grayscale(img, width, height);
+    if (!gray_img) {
+        printf("Memory allocation failed\n");
         stbi_image_free(img);
         return 1;
     }
 
-    for (int i = 0; i < width * height; i++) {
-        int r = img[i * channels + 0];
-        int g = img[i * channels + 1];
-        int b = img[i * channels + 2];
-        unsigned char gray = (r * 0.3) + (g * 0.59) + (b * 0.11);
-        gray_img[i] = gray;
-    }
+    clock_t end_time = clock();
+    double time_taken = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+    printf("Processed %d pixels in %f seconds\n", width * height, time_taken);
 
-    stbi_write_png("output/gray_image.png", width, height, 1, gray_img, width);
+    if (!stbi_write_png("output/gray_image.png", width, height, 1, gray_img, width)) {
+        printf("Failed to write image\n");
+    } else {
+        printf("Grayscale image saved to gray_image.png\n");
+    }
 
     stbi_image_free(img);
     free(gray_img);
-
-    printf("Grayscale image saved to output/gray_image.png\n");
 
     return 0;
 }
