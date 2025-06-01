@@ -31,7 +31,7 @@ uint8_t* convert_to_grayscale(unsigned char *img, int width, int height) {
 
 int main() {
     int width, height, channels;
-    unsigned char *img = stbi_load("images/test.jpg", &width, &height, &channels, 3);
+    unsigned char *img = stbi_load("output/sobel.png", &width, &height, &channels, 3);
     if (!img) {
         printf("Failed to load image\n");
         return 1;
@@ -50,7 +50,7 @@ int main() {
     double time_taken = (double)(end_time - start_time) / CLOCKS_PER_SEC;
     printf("Processed %d pixels in %f seconds\n", width * height, time_taken);
 
-    if (!stbi_write_png("output/gray_image.png", width, height, 1, gray_img, width)) {
+    if (!stbi_write_png("output/sobel_gray_image.png", width, height, 1, gray_img, width)) {
         printf("Failed to write image\n");
     } else {
         printf("Grayscale image saved to gray_image.png\n");

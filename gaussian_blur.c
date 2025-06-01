@@ -17,13 +17,15 @@ const int kernel[3][3] = {
     {1, 2, 1}
 };
 
-uint8_t* gaussian_blur(uint8_t *input, int width, int height) {
-    uint8_t *output = malloc(width * height);
+uint8_t* gaussian_blur_rgb(uint8_t *input, int width, int height) {
+    uint8_t *output = malloc(width * height * 3);
     if (!output) return NULL;
 
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            int sum = 0;
+            int sum_r = 0;
+            int sum_g = 0;
+            int sum_b = 0;
             int weight_sum = 0;
 
             // Apply 3x3 kernel with zero-padding
@@ -34,20 +36,34 @@ uint8_t* gaussian_blur(uint8_t *input, int width, int height) {
 
                     // Check for valid neighbors inside image bounds
                     if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                        int pixel = input[ny * width + nx];
+                        int idx = (ny * width + nx) * 3;
+                        int r = input[idx];
+                        int g = input[idx + 1];
+                        int b = input[idx + 2];
                         int weight = kernel[ky + 1][kx + 1];
-                        sum += pixel * weight;
+                        sum_r += r * weight;
+                        sum_g += g * weight;
+                        sum_b += b * weight;
                         weight_sum += weight;
                     }
                 }
             }
 
             // Normalize and clamp the result
-            int val = sum / weight_sum;
-            if (val > 255) val = 255;
-            if (val < 0) val = 0;
+            int val_r = sum_r / weight_sum;
+            int val_g = sum_g / weight_sum;
+            int val_b = sum_b / weight_sum;
+            if (val_r > 255) val_r = 255;
+            if (val_g > 255) val_g = 255;
+            if (val_b > 255) val_b = 255;
+            if (val_r < 0) val_r = 0;
+            if (val_g < 0) val_g = 0;
+            if (val_b < 0) val_b = 0;
 
-            output[y * width + x] = (uint8_t)val;
+            int idx = (y * width + x) * 3;
+            output[idx] = (uint8_t)val_r;
+            output[idx + 1] = (uint8_t)val_g;
+            output[idx + 2] = (uint8_t)val_b;
         }
     }
 
@@ -56,7 +72,7 @@ uint8_t* gaussian_blur(uint8_t *input, int width, int height) {
 
 int main() {
     int width, height, channels;
-    unsigned char *img = stbi_load("output/gray_image.png", &width, &height, &channels, 3);
+    unsigned char *img = stbi_load("images/test.jpg", &width, &height, &channels, 0);
     if (!img) {
         printf("Failed to load image\n");
         return 1;
@@ -64,8 +80,8 @@ int main() {
 
     clock_t start_time = clock();
 
-    uint8_t *gray_img = gaussian_blur(img, width, height);
-    if (!gray_img) {
+    uint8_t *rgb_img = gaussian_blur_rgb(img, width, height);
+    if (!rgb_img) {
         printf("Memory allocation failed\n");
         stbi_image_free(img);
         return 1;
@@ -75,14 +91,15 @@ int main() {
     double time_taken = (double)(end_time - start_time) / CLOCKS_PER_SEC;
     printf("Processed %d pixels in %f seconds\n", width * height, time_taken);
 
-    if (!stbi_write_png("output/gaussian.png", width, height, 1, gray_img, width)) {
+    if (!stbi_write_png("output/gaussian_rgb.png", width, height, 3, rgb_img, width * 3)) {
         printf("Failed to write image\n");
     } else {
-        printf("Grayscale image saved to gray_image.png\n");
+        printf("RGB image saved to gaussian_rgb.png\n");
     }
 
     stbi_image_free(img);
-    free(gray_img);
+    free(rgb_img);
 
     return 0;
 }
+
