@@ -72,7 +72,7 @@ uint8_t* apply_sobel_filter(unsigned char *img, int width, int height, int chann
 
 int main() {
     int width, height, channels;
-    unsigned char *img = stbi_load("images/test.jpg", &width, &height, &channels, 3);
+    unsigned char *img = stbi_load("../images/test.jpg", &width, &height, &channels, 3);
     if (!img) {
         printf("Failed to load image\n");
         return 1;

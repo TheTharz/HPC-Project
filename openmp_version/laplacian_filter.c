@@ -1,13 +1,16 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "../stb_image.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include "../stb_image_write.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
+
+#include <omp.h>
+#include <unistd.h>
 
 // Apply Laplacian filter to a grayscale image
 uint8_t* apply_laplacian_filter(uint8_t *gray_img, int width, int height) {
@@ -20,6 +23,7 @@ uint8_t* apply_laplacian_filter(uint8_t *gray_img, int width, int height) {
     uint8_t *output = malloc(width * height);
     if (!output) return NULL;
 
+    #pragma omp parallel for
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             int sum = 0;
@@ -50,23 +54,25 @@ uint8_t* apply_laplacian_filter(uint8_t *gray_img, int width, int height) {
 
 int main() {
     int width, height, channels;
-    unsigned char *img = stbi_load("output/gray_image.png", &width, &height, &channels, 3);
+    unsigned char *img = stbi_load("../images/test.jpg", &width, &height, &channels, 3);
     if (!img) {
         printf("Failed to load image\n");
         return 1;
     }
 
-    clock_t start_time = clock();
+    double start_time = omp_get_wtime();
 
     uint8_t *gray_img = apply_laplacian_filter(img, width, height);
+
+    double end_time = omp_get_wtime();
+
     if (!gray_img) {
         printf("Memory allocation failed\n");
         stbi_image_free(img);
         return 1;
     }
 
-    clock_t end_time = clock();
-    double time_taken = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+    double time_taken = end_time - start_time;
     printf("Processed %d pixels in %f seconds\n", width * height, time_taken);
 
     if (!stbi_write_png("output/laplacian.png", width, height, 1, gray_img, width)) {

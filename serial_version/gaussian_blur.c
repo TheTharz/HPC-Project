@@ -1,14 +1,15 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "../stb_image.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include "../stb_image_write.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
 
+#include <omp.h>
 // 3x3 Gaussian kernel with sigma ~1
 // Normalized so sum = 16
 const int kernel[3][3] = {
@@ -72,26 +73,26 @@ uint8_t* gaussian_blur_rgb(uint8_t *input, int width, int height) {
 
 int main() {
     int width, height, channels;
-    unsigned char *img = stbi_load("images/test.jpg", &width, &height, &channels, 0);
+    unsigned char *img = stbi_load("../images/test.jpg", &width, &height, &channels, 0);
     if (!img) {
         printf("Failed to load image\n");
         return 1;
     }
 
-    clock_t start_time = clock();
+    double start_time = omp_get_wtime();
 
     uint8_t *rgb_img = gaussian_blur_rgb(img, width, height);
+    double end_time = omp_get_wtime();
     if (!rgb_img) {
         printf("Memory allocation failed\n");
         stbi_image_free(img);
         return 1;
     }
 
-    clock_t end_time = clock();
-    double time_taken = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+    double time_taken= end_time - start_time;
     printf("Processed %d pixels in %f seconds\n", width * height, time_taken);
 
-    if (!stbi_write_png("output/gaussian_rgb.png", width, height, 3, rgb_img, width * 3)) {
+    if (!stbi_write_png("output/gaussian.png", width, height, 3, rgb_img, width * 3)) {
         printf("Failed to write image\n");
     } else {
         printf("RGB image saved to gaussian_rgb.png\n");

@@ -1,15 +1,15 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "../stb_image.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include "../stb_image_write.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
+#include <omp.h>
 
-// Function to convert RGB image to grayscale
 uint8_t* convert_to_grayscale(unsigned char *img, int width, int height) {
     uint8_t *gray_img = malloc(width * height);
     if (!gray_img) {
@@ -30,27 +30,31 @@ uint8_t* convert_to_grayscale(unsigned char *img, int width, int height) {
 }
 
 int main() {
+    //image loading
     int width, height, channels;
-    unsigned char *img = stbi_load("output/sobel.png", &width, &height, &channels, 3);
+    unsigned char *img = stbi_load("../images/test.jpg", &width, &height, &channels, 3);
     if (!img) {
         printf("Failed to load image\n");
         return 1;
     }
 
-    clock_t start_time = clock();
+    double start_time = omp_get_wtime();
 
     uint8_t *gray_img = convert_to_grayscale(img, width, height);
+
+    double end_time = omp_get_wtime();
+
     if (!gray_img) {
         printf("Memory allocation failed\n");
         stbi_image_free(img);
         return 1;
     }
 
-    clock_t end_time = clock();
-    double time_taken = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+    double time_taken = end_time - start_time;
     printf("Processed %d pixels in %f seconds\n", width * height, time_taken);
 
-    if (!stbi_write_png("output/sobel_gray_image.png", width, height, 1, gray_img, width)) {
+    //saving the output
+    if (!stbi_write_png("output/gray_image.png", width, height, 1, gray_img, width)) {
         printf("Failed to write image\n");
     } else {
         printf("Grayscale image saved to gray_image.png\n");
