@@ -28,6 +28,7 @@ uint8_t* apply_sobel_filter(unsigned char *img, int width, int height, int chann
     uint8_t *output = malloc(width * height * channels);
     if (!output) return NULL;
 
+    #pragma omp parallel for collapse(2)
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             int sumX[3] = { 0, 0, 0 };
@@ -85,7 +86,7 @@ int main() {
     uint8_t *output = apply_sobel_filter(img, width, height, channels);
     
     double end_time = omp_get_wtime();
-
+    
     if (!output) {
         printf("Memory allocation failed\n");
         stbi_image_free(img);
