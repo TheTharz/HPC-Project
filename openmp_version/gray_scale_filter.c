@@ -78,6 +78,10 @@ int main() {
 
     double total_start_time = omp_get_wtime(); // Start total timer
 
+    int num_threads = 8;
+    omp_set_num_threads(num_threads);
+    printf("Using %d threads\n", num_threads);
+
     #pragma omp parallel for
     for (int i = 0; i < entry_count; i++) {
         char input_path[512];
