@@ -11,7 +11,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <time.h>
+#include <omp.h>
 
 __global__ void grayscale_kernel(uint8_t *input, uint8_t *output, int width, int height) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -32,12 +32,13 @@ int has_image_extension(const char *filename) {
     return strcmp(ext, ".jpg") == 0 || strcmp(ext, ".png") == 0;
 }
 
-int process_image_cuda(const char *input_path, const char *output_path) {
+void process_image_cuda(const char *input_path, const char *output_path) {
     int width, height, channels;
     unsigned char *img = stbi_load(input_path, &width, &height, &channels, 3);
     if (!img) {
+        #pragma omp critical
         printf("Failed to load image: %s\n", input_path);
-        return 0;
+        return;
     }
 
     size_t img_size_rgb = width * height * 3;
@@ -46,7 +47,6 @@ int process_image_cuda(const char *input_path, const char *output_path) {
     uint8_t *d_input, *d_output;
     cudaMalloc((void **)&d_input, img_size_rgb);
     cudaMalloc((void **)&d_output, img_size_gray);
-
     cudaMemcpy(d_input, img, img_size_rgb, cudaMemcpyHostToDevice);
 
     dim3 blockDim(16, 16);
@@ -58,8 +58,10 @@ int process_image_cuda(const char *input_path, const char *output_path) {
     cudaMemcpy(gray_img, d_output, img_size_gray, cudaMemcpyDeviceToHost);
 
     if (!stbi_write_png(output_path, width, height, 1, gray_img, width)) {
+        #pragma omp critical
         printf("Failed to write image: %s\n", output_path);
     } else {
+        #pragma omp critical
         printf("Processed %s → %s\n", input_path, output_path);
     }
 
@@ -67,8 +69,6 @@ int process_image_cuda(const char *input_path, const char *output_path) {
     free(gray_img);
     cudaFree(d_input);
     cudaFree(d_output);
-
-    return 1;
 }
 
 int main() {
@@ -83,6 +83,7 @@ int main() {
         }
     }
 
+    // Collect image filenames
     DIR *dir = opendir(input_folder);
     if (!dir) {
         perror("Failed to open input directory");
@@ -90,21 +91,31 @@ int main() {
     }
 
     struct dirent *entry;
-    clock_t start = clock();
-    while ((entry = readdir(dir)) != NULL) {
+    char *filenames[1024];
+    int count = 0;
+
+    while ((entry = readdir(dir)) != NULL && count < 1024) {
         if (entry->d_type == DT_REG && has_image_extension(entry->d_name)) {
-            char input_path[512], output_path[512];
-            snprintf(input_path, sizeof(input_path), "%s/%s", input_folder, entry->d_name);
-            snprintf(output_path, sizeof(output_path), "%s/gray_%s", output_folder, entry->d_name);
-            process_image_cuda(input_path, output_path);
+            filenames[count] = strdup(entry->d_name); // Safe copy
+            count++;
         }
     }
-    clock_t end = clock();
     closedir(dir);
 
-    double total_time = ((double)(end - start)) / CLOCKS_PER_SEC;
-    printf("Total processing time: %f seconds\n", total_time);
+    double start_time = omp_get_wtime();
+
+    // Parallelized image processing loop
+    #pragma omp parallel for
+    for (int i = 0; i < count; i++) {
+        char input_path[512], output_path[512];
+        snprintf(input_path, sizeof(input_path), "%s/%s", input_folder, filenames[i]);
+        snprintf(output_path, sizeof(output_path), "%s/gray_%s", output_folder, filenames[i]);
+        process_image_cuda(input_path, output_path);
+        free(filenames[i]); // cleanup
+    }
+
+    double end_time = omp_get_wtime();
+    printf("Total processing time: %.3f seconds with %d threads\n", end_time - start_time, omp_get_max_threads());
 
     return 0;
 }
-
