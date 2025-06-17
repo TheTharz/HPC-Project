@@ -59,48 +59,64 @@ int main() {
         return 1;
     }
 
-    double total_start_time = omp_get_wtime(); // Start total timer
-
+    // Collect entries first
+    struct dirent *entries[1024];
+    int entry_count = 0;
     struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) {
+    while ((entry = readdir(dir)) != NULL && entry_count < 1024) {
         if (entry->d_type == DT_REG && has_image_extension(entry->d_name)) {
-            char input_path[512];
-            snprintf(input_path, sizeof(input_path), "%s/%s", input_folder, entry->d_name);
-
-            int width, height, channels;
-            unsigned char *img = stbi_load(input_path, &width, &height, &channels, 3);
-            if (!img) {
-                printf("Failed to load image: %s\n", input_path);
-                continue;
+            // Copy entry to array
+            entries[entry_count] = malloc(sizeof(struct dirent));
+            if (entries[entry_count]) {
+                memcpy(entries[entry_count], entry, sizeof(struct dirent));
+                entry_count++;
             }
-
-            double start_time = omp_get_wtime();
-            uint8_t *gray_img = convert_to_grayscale(img, width, height);
-            double end_time = omp_get_wtime();
-
-            if (!gray_img) {
-                printf("Memory allocation failed for %s\n", entry->d_name);
-                stbi_image_free(img);
-                continue;
-            }
-
-            char output_path[512];
-            snprintf(output_path, sizeof(output_path), "output/gray_%s", entry->d_name);
-
-            if (!stbi_write_png(output_path, width, height, 1, gray_img, width)) {
-                printf("Failed to write image: %s\n", output_path);
-            } else {
-                printf("Processed %s in %f seconds\n", entry->d_name, end_time - start_time);
-            }
-
-            stbi_image_free(img);
-            free(gray_img);
         }
     }
     closedir(dir);
+
+    double total_start_time = omp_get_wtime(); // Start total timer
+
+    for (int i = 0; i < entry_count; i++) {
+        char input_path[512];
+        snprintf(input_path, sizeof(input_path), "%s/%s", input_folder, entries[i]->d_name);
+
+        int width, height, channels;
+        unsigned char *img = stbi_load(input_path, &width, &height, &channels, 3);
+        if (!img) {
+            printf("Failed to load image: %s\n", input_path);
+            free(entries[i]);
+            continue;
+        }
+
+        double start_time = omp_get_wtime();
+        uint8_t *gray_img = convert_to_grayscale(img, width, height);
+        double end_time = omp_get_wtime();
+
+        if (!gray_img) {
+            printf("Memory allocation failed for %s\n", entries[i]->d_name);
+            stbi_image_free(img);
+            free(entries[i]);
+            continue;
+        }
+
+        char output_path[512];
+        snprintf(output_path, sizeof(output_path), "output/gray_%s", entries[i]->d_name);
+
+        if (!stbi_write_png(output_path, width, height, 1, gray_img, width)) {
+            printf("Failed to write image: %s\n", output_path);
+        } else {
+            printf("Processed %s in %f seconds\n", entries[i]->d_name, end_time - start_time);
+        }
+
+        stbi_image_free(img);
+        free(gray_img);
+        free(entries[i]);
+    }
 
     double total_end_time = omp_get_wtime(); // End total timer
     printf("Total processing time: %f seconds\n", total_end_time - total_start_time);
 
     return 0;
 }
+
