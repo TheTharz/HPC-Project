@@ -73,12 +73,18 @@ int process_image_cuda(const char *input_path, const char *output_path) {
 
 int main() {
     const char *input_folder = "../images/testing_images";
-    const char *output_folder = "output";
+    const char *output_folder = "output/grayscale";
 
     struct stat st = {0};
-    if (stat(output_folder, &st) == -1) {
-        if (mkdir(output_folder, 0755) != 0) {
+    if (stat("output", &st) == -1) {
+        if (mkdir("output", 0755) != 0) {
             perror("Failed to create output directory");
+            return 1;
+        }
+    }
+    if (stat("output/grayscale", &st) == -1) {
+        if (mkdir("output/grayscale", 0755) != 0) {
+            perror("Failed to create output/grayscale directory");
             return 1;
         }
     }

@@ -52,6 +52,12 @@ int main() {
             return 1;
         }
     }
+    if (stat("output/grayscale", &st) == -1) {
+        if (mkdir("output/grayscale", 0755) != 0) {
+            perror("Failed to create output/grayscale directory");
+            return 1;
+        }
+    }
 
     DIR *dir = opendir(input_folder);
     if (!dir) {
@@ -101,7 +107,7 @@ int main() {
         }
 
         char output_path[512];
-        snprintf(output_path, sizeof(output_path), "output/gray_%s", entries[i]->d_name);
+        snprintf(output_path, sizeof(output_path), "output/grayscale/gray_%s", entries[i]->d_name);
 
         if (!stbi_write_png(output_path, width, height, 1, gray_img, width)) {
             printf("Failed to write image: %s\n", output_path);
