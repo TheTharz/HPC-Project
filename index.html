@@ -44,31 +44,46 @@
         color: #fff;
         margin-top: 2rem;
       }
+      .dir-structure {
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        padding: 1rem;
+        font-family: monospace;
+        font-size: 0.95em;
+        margin-bottom: 1.5rem;
+        overflow-x: auto;
+      }
     </style>
   </head>
   <body>
     <header>
-      <h1>Accelerating Image Kernel Operations</h1>
-      <p>Using CUDA, OpenMP, and Hybrid Parallel Approaches</p>
+      <h1>Image Kernel Processing Acceleration</h1>
+      <p>
+        Serial, OpenMP, CUDA, and Hybrid Approaches for Fast Image Filtering
+      </p>
     </header>
 
     <main>
       <section>
-        <h2>About the Project</h2>
+        <h2>Project Description</h2>
         <p>
-          This project explores the acceleration of common image processing
-          tasks using three parallel computing techniques:
-          <strong>CUDA</strong> (GPU-based),
-          <strong>OpenMP</strong> (multi-threaded CPU), and a
-          <strong>Hybrid model</strong> that combines both. It aims to
-          demonstrate how parallel programming can significantly reduce
-          computation time when applying image kernels.
+          <strong>
+            A comparative study of image processing kernels implemented in C
+            using Serial, OpenMP, CUDA, and Hybrid (OpenMP + CUDA) approaches.
+          </strong>
+          This project demonstrates grayscale conversion, Gaussian blur, Sobel
+          edge detection, and Laplacian filtering on images, highlighting the
+          performance benefits of parallel and GPU computing.
         </p>
       </section>
 
       <section>
         <h2>Author</h2>
-        <p><strong>Jayawardhana M.V.T.I</strong><br />University of Ruhuna</p>
+        <p>
+          <strong>Jayawardhana M.V.T.I</strong><br />
+          University of Ruhuna<br />
+          Index Number: EG/2020/3996
+        </p>
       </section>
 
       <section>
@@ -89,16 +104,20 @@
         <h2>Implemented Image Kernels</h2>
         <ul>
           <li>
-            <strong>Grayscale Conversion:</strong> Converts RGB to intensity
-            values.
+            <strong>Grayscale Conversion:</strong> Converts RGB images to
+            grayscale using a weighted sum of color channels.
           </li>
           <li>
-            <strong>Gaussian Blur:</strong> Smooths images using a weighted
-            average convolution kernel.
+            <strong>Gaussian Blur:</strong> Applies a smoothing filter to reduce
+            noise and detail using a convolution kernel.
           </li>
           <li>
-            <strong>Sobel Edge Detection:</strong> Detects horizontal and
-            vertical edges using gradient-based filters.
+            <strong>Sobel Edge Detection:</strong> Detects edges in both X and Y
+            directions using gradient-based convolution.
+          </li>
+          <li>
+            <strong>Laplacian Filter:</strong> Highlights regions of rapid
+            intensity change (edges) using a Laplacian kernel.
           </li>
         </ul>
       </section>
@@ -106,18 +125,72 @@
       <section>
         <h2>Approaches</h2>
         <ul>
-          <li><strong>Serial:</strong> Basic sequential processing.</li>
           <li>
-            <strong>CUDA:</strong> GPU-based parallelism with one thread per
-            pixel, using shared memory for tiles.
+            <strong>Serial:</strong> Standard C code using nested loops for
+            pixel-wise processing.
           </li>
           <li>
-            <strong>OpenMP:</strong> CPU multithreading to process image regions
-            or multiple images.
+            <strong>OpenMP:</strong> Multi-threaded CPU processing using OpenMP
+            directives to parallelize loops.
           </li>
           <li>
-            <strong>Hybrid:</strong> OpenMP distributes multiple images to
-            threads, each thread invokes CUDA kernels.
+            <strong>CUDA:</strong> GPU-based parallelism, assigning one thread
+            per pixel for maximum concurrency.
+          </li>
+          <li>
+            <strong>Hybrid:</strong> Combines OpenMP and CUDA: OpenMP
+            distributes images or batches to CPU threads, each of which invokes
+            CUDA kernels for pixel-level processing.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Directory Structure</h2>
+        <div class="dir-structure">
+          serial_version/ gaussian_blur.o gray_scale_filter.o laplacian_filter.o
+          sobel.o output/ gaussian/ grayscale/ laplacian/ openmp_version/
+          gaussian_blur.o gray_scale_filter.o laplacian_filter.o sobel.o output/
+          gaussian/ grayscale/ laplacian/ cuda_version/ gaussian_blur.o
+          gray_scale_filter.o laplacian_filter.o sobel.o output/ gaussian/
+          grayscale/ laplacian/ hybrid_version/ gaussian_blur.o
+          gray_scale_filter.o laplacian_filter.o output/ gaussian/ grayscale/
+          laplacian/ images/ testing_images/
+        </div>
+      </section>
+
+      <section>
+        <h2>How to Run</h2>
+        <ol>
+          <li>
+            Build the desired version (serial, OpenMP, CUDA, or hybrid) using
+            the provided Makefile or compile manually.
+          </li>
+          <li>
+            Place input images in the
+            <code>images/testing_images/</code> directory.
+          </li>
+          <li>
+            Run the executable for the chosen version. Output images will be
+            saved in the corresponding <code>output/</code> subdirectory.
+          </li>
+        </ol>
+        <p><strong>Examples:</strong></p>
+        <ul>
+          <li>
+            <code>cd serial_version</code><br />
+            <code>gcc gray_scale_filter.c -o gray_serial</code><br />
+            <code>./gray_serial</code>
+          </li>
+          <li>
+            <code>cd openmp_version</code><br />
+            <code>gcc -fopenmp gray_scale_filter.c -o gray_omp</code><br />
+            <code>./gray_omp</code>
+          </li>
+          <li>
+            <code>cd cuda_version</code><br />
+            <code>nvcc gray_scale_filter.cu -o gray_cuda</code><br />
+            <code>./gray_cuda</code>
           </li>
         </ul>
       </section>
@@ -125,16 +198,38 @@
       <section>
         <h2>Performance Evaluation</h2>
         <p>
-          The execution time for each method is measured and compared to the
-          serial version to demonstrate the performance gains from using
-          parallel computing techniques.
+          Execution time for each kernel and version is measured using
+          wall-clock timers (<code>omp_get_wtime()</code> and CUDA timers).
+          Results are compared to the serial baseline to demonstrate the speedup
+          achieved by parallel and GPU computing.
         </p>
+      </section>
+
+      <section>
+        <h2>References</h2>
+        <ul>
+          <li>
+            <a href="https://www.openmp.org/" target="_blank"
+              >OpenMP Documentation</a
+            >
+          </li>
+          <li>
+            <a href="https://docs.nvidia.com/cuda/" target="_blank"
+              >CUDA Toolkit Documentation</a
+            >
+          </li>
+          <li>
+            <a href="https://github.com/nothings/stb" target="_blank"
+              >stb_image.h / stb_image_write.h</a
+            >
+          </li>
+        </ul>
       </section>
 
       <section>
         <h2>Project Repository</h2>
         <p>
-          View the full source code and results on GitHub:
+          View the full source code and results on GitHub:<br />
           <a href="https://github.com/TheTharz/HPC-Project" target="_blank">
             github.com/TheTharz/HPC-Project
           </a>
