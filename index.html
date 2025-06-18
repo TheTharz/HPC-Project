@@ -199,18 +199,47 @@
 
       <section>
         <h2>Directory Structure</h2>
-        <div class="dir-structure">
-          serial_version/ ├── gaussian_blur.o ├── gray_scale_filter.o ├──
-          laplacian_filter.o ├── sobel.o ├── output/ │ ├── gaussian/ │ ├──
-          grayscale/ │ ├── laplacian/ openmp_version/ ├── gaussian_blur.o ├──
-          gray_scale_filter.o ├── laplacian_filter.o ├── sobel.o ├── output/ │
-          ├── gaussian/ │ ├── grayscale/ │ ├── laplacian/ cuda_version/ ├──
-          gaussian_blur.o ├── gray_scale_filter.o ├── laplacian_filter.o ├──
-          sobel.o ├── output/ │ ├── gaussian/ │ ├── grayscale/ │ ├── laplacian/
-          hybrid_version/ ├── gaussian_blur.o ├── gray_scale_filter.o ├──
-          laplacian_filter.o ├── output/ │ ├── gaussian/ │ ├── grayscale/ │ ├──
-          laplacian/ images/ └── testing_images/
-        </div>
+        <pre class="dir-structure">
+project-root/
+├── serial_version/
+│   ├── gaussian_blur.o
+│   ├── gray_scale_filter.o
+│   ├── laplacian_filter.o
+│   ├── sobel.o
+│   └── output/
+│       ├── gaussian/
+│       ├── grayscale/
+│       └── laplacian/
+├── openmp_version/
+│   ├── gaussian_blur.o
+│   ├── gray_scale_filter.o
+│   ├── laplacian_filter.o
+│   ├── sobel.o
+│   └── output/
+│       ├── gaussian/
+│       ├── grayscale/
+│       └── laplacian/
+├── cuda_version/
+│   ├── gaussian_blur.o
+│   ├── gray_scale_filter.o
+│   ├── laplacian_filter.o
+│   ├── sobel.o
+│   └── output/
+│       ├── gaussian/
+│       ├── grayscale/
+│       └── laplacian/
+├── hybrid_version/
+│   ├── gaussian_blur.o
+│   ├── gray_scale_filter.o
+│   ├── laplacian_filter.o
+│   └── output/
+│       ├── gaussian/
+│       ├── grayscale/
+│       └── laplacian/
+└── images/
+    └── testing_images/
+</pre
+        >
       </section>
 
       <section>
