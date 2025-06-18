@@ -121,6 +121,7 @@ int main() {
     if (stat("output", &st) == -1) mkdir("output", 0755);
     if (stat("output/gaussian", &st) == -1) mkdir("output/gaussian", 0755);
 
+    // Collect image filenames
     DIR *dir = opendir(input_folder);
     if (!dir) {
         perror("Failed to open input directory");
@@ -128,20 +129,31 @@ int main() {
     }
 
     struct dirent *entry;
-    clock_t start = clock();
-    while ((entry = readdir(dir)) != NULL) {
+    char *filenames[1024];
+    int count = 0;
+
+    while ((entry = readdir(dir)) != NULL && count < 1024) {
         if (entry->d_type == DT_REG && has_image_extension(entry->d_name)) {
-            char input_path[512], output_path[512];
-            snprintf(input_path, sizeof(input_path), "%s/%s", input_folder, entry->d_name);
-            snprintf(output_path, sizeof(output_path), "%s/gaussian_%s", output_folder, entry->d_name);
-            process_image_cuda(input_path, output_path);
+            filenames[count] = strdup(entry->d_name); // Safe copy
+            count++;
         }
     }
     closedir(dir);
-    clock_t end = clock();
 
-    double total_time = ((double)(end - start)) / CLOCKS_PER_SEC;
-    printf("Total processing time: %.2f seconds\n", total_time);
+    double start_time = omp_get_wtime();
+
+    // Parallelized image processing loop
+    #pragma omp parallel for
+    for (int i = 0; i < count; i++) {
+        char input_path[512], output_path[512];
+        snprintf(input_path, sizeof(input_path), "%s/%s", input_folder, filenames[i]);
+        snprintf(output_path, sizeof(output_path), "%s/gray_%s", output_folder, filenames[i]);
+        process_image_cuda(input_path, output_path);
+        free(filenames[i]); // cleanup
+    }
+
+    double end_time = omp_get_wtime();
+    printf("Total processing time: %.3f seconds with %d threads\n", end_time - start_time, omp_get_max_threads());
 
     return 0;
 }
