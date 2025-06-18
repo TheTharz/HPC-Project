@@ -12,6 +12,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <omp.h>
+
 __constant__ int d_kernel[3][3];  // Laplacian kernel in constant memory
 
 int has_image_extension(const char *filename) {
@@ -116,30 +118,32 @@ int main() {
     }
 
     struct dirent *entry;
+    char *filenames[1024];
+    int count = 0;
 
-    // CUDA event-based timing
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    cudaEventRecord(start);
-
-    while ((entry = readdir(dir)) != NULL) {
+    while ((entry = readdir(dir)) != NULL && count < 1024) {
         if (entry->d_type == DT_REG && has_image_extension(entry->d_name)) {
-            char input_path[512], output_path[512];
-            snprintf(input_path, sizeof(input_path), "%s/%s", input_folder, entry->d_name);
-            snprintf(output_path, sizeof(output_path), "%s/laplacian_%s", output_folder, entry->d_name);
-
-            process_image(input_path, output_path);
+            filenames[count] = strdup(entry->d_name); // Safe copy
+            count++;
         }
     }
-
     closedir(dir);
 
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-    float total_time_ms = 0;
-    cudaEventElapsedTime(&total_time_ms, start, stop);
-    printf("All images processed in %.3f milliseconds (GPU + host).\n", total_time_ms);
+    double start_time = omp_get_wtime();
+
+    // Parallelized image processing loop
+    #pragma omp parallel for
+    for (int i = 0; i < count; i++) {
+        char input_path[512], output_path[512];
+        snprintf(input_path, sizeof(input_path), "%s/%s", input_folder, filenames[i]);
+        snprintf(output_path, sizeof(output_path), "%s/laplacian_%s", output_folder, filenames[i]);
+        process_image(input_path, output_path);
+        free(filenames[i]); // cleanup
+    }
+
+    double end_time = omp_get_wtime();
+    printf("Total processing time: %.3f seconds with %d threads\n", end_time - start_time, omp_get_max_threads());
+
 
     return 0;
 }

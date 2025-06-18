@@ -125,6 +125,7 @@ int main() {
 
     double total_start_time = omp_get_wtime(); // Start total timer
 
+    #pragma omp parallel for
     for (int i = 0; i < entry_count; i++) {
         char input_path[512];
         snprintf(input_path, sizeof(input_path), "%s/%s", input_folder, entries[i]->d_name);
