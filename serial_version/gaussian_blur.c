@@ -16,7 +16,6 @@
 
 #include<omp.h>
 // 3x3 Gaussian kernel with sigma ~1
-// Normalized so sum = 16
 const int kernel[3][3] = {
     {1, 2, 1},
     {2, 4, 2},
@@ -150,7 +149,7 @@ int main() {
         char output_path[512];
         snprintf(output_path, sizeof(output_path), "output/gaussian/gray_%s", entries[i]->d_name);
 
-        if (!stbi_write_png(output_path, width, height, 1, gray_img, width)) {
+        if (!stbi_write_png(output_path, width, height, 3, gray_img, width*3)) {
             printf("Failed to write image: %s\n", output_path);
         } else {
             printf("Processed %s in %f seconds\n", entries[i]->d_name, end_time - start_time);
