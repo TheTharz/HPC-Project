@@ -75,6 +75,15 @@ uint8_t* apply_sobel_filter(uint8_t *input, int width, int height) {
 }
 
 int main(int argc, char *argv[]) {
+    int num_threads = 8;
+    if (argc > 3) {
+        num_threads = atoi(argv[3]);
+        if (num_threads <= 0) {
+            fprintf(stderr, "Invalid number of threads: %s\n", argv[3]);
+            return 1;
+        }
+    }
+    omp_set_num_threads(num_threads);
     // const char *input_folder = "../images/testing_images";
     const char *input_folder = getenv("INPUT_DIR");
     if (argc > 1) {

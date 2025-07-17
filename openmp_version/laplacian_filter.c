@@ -61,7 +61,14 @@ uint8_t* apply_laplacian_filter(uint8_t *gray_img, int width, int height) {
 }
 
 int main(int argc, char *argv[]) {
-    int num_threads = 8; 
+    int num_threads = 8;
+    if (argc > 3) {
+        num_threads = atoi(argv[3]);
+        if (num_threads <= 0) {
+            fprintf(stderr, "Invalid number of threads: %s\n", argv[3]);
+            return 1;
+        }
+    }
     omp_set_num_threads(num_threads);
     printf("Using %d threads\n", num_threads);
     
