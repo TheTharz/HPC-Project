@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>
+#include <omp.h>
 
 __global__ void grayscale_kernel(uint8_t *input, uint8_t *output, int width, int height) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -52,7 +53,7 @@ int process_image_cuda(const char *input_path, const char *output_path) {
     dim3 blockDim(16, 16);
     dim3 gridDim((width + 15) / 16, (height + 15) / 16);
     grayscale_kernel<<<gridDim, blockDim>>>(d_input, d_output, width, height);
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
 
     uint8_t *gray_img = (uint8_t *)malloc(img_size_gray);
     cudaMemcpy(gray_img, d_output, img_size_gray, cudaMemcpyDeviceToHost);
@@ -71,20 +72,29 @@ int process_image_cuda(const char *input_path, const char *output_path) {
     return 1;
 }
 
-int main() {
-    const char *input_folder = "../images/testing_images";
-    const char *output_folder = "output/grayscale";
-
-    struct stat st = {0};
-    if (stat("output", &st) == -1) {
-        if (mkdir("output", 0755) != 0) {
-            perror("Failed to create output directory");
-            return 1;
-        }
+int main(int argc, char *argv[]) {
+    // const char *input_folder = "../images/testing_images";
+    const char *input_folder = getenv("INPUT_DIR");
+    if (argc > 1) {
+        input_folder = argv[1];
     }
-    if (stat("output/grayscale", &st) == -1) {
-        if (mkdir("output/grayscale", 0755) != 0) {
-            perror("Failed to create output/grayscale directory");
+    if (!input_folder) {
+        fprintf(stderr, "INPUT_DIR not set and no input folder given\n");
+        return 1;
+    }
+    // const char *output_folder = "output/grayscale";
+    const char *output_folder = getenv("OUTPUT_DIR");
+    if (argc > 2) {
+        output_folder = argv[2];
+    }
+    if (!output_folder) {
+        fprintf(stderr, "OUTPUT_DIR not set and no output folder given\n");
+        return 1;
+    }
+    struct stat st = {0};
+    if (stat(output_folder, &st) == -1) {
+        if (mkdir(output_folder, 0755) != 0) {
+            perror("Failed to create output directory");
             return 1;
         }
     }
@@ -94,6 +104,8 @@ int main() {
         perror("Failed to open input directory");
         return 1;
     }
+
+    double total_start_time = omp_get_wtime();
 
     struct dirent *entry;
     clock_t start = clock();
@@ -105,12 +117,14 @@ int main() {
             process_image_cuda(input_path, output_path);
         }
     }
-    clock_t end = clock();
     closedir(dir);
+    double total_end_time = omp_get_wtime(); 
 
-    double total_time = ((double)(end - start)) / CLOCKS_PER_SEC;
-    printf("Total processing time: %f seconds\n", total_time);
+    printf("Total processing time: %f seconds\n", total_end_time - total_start_time);
+
 
     return 0;
 }
 
+
+//NOTE : Try to do the parallelism of multiple images at once

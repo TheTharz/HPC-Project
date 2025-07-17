@@ -12,7 +12,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-__constant__ int d_kernel[3][3];  // Laplacian kernel in constant memory
+__constant__ int d_kernel[3][3]; 
 
 int has_image_extension(const char *filename) {
     const char *ext = strrchr(filename, '.');
@@ -101,13 +101,32 @@ int process_image(const char *input_path, const char *output_path) {
     return 0;
 }
 
-int main() {
-    const char *input_folder = "../images/testing_images";
-    const char *output_folder = "output/laplacian";
-
+int main(int argc, char *argv[]) {
+    // const char *input_folder = "../images/testing_images";
+    const char *input_folder = getenv("INPUT_DIR");
+    if (argc > 1) {
+        input_folder = argv[1];
+    }
+    if (!input_folder) {
+        fprintf(stderr, "INPUT_DIR not set and no input folder given\n");
+        return 1;
+    }
+    // const char *output_folder = "output/laplacian";
+    const char *output_folder = getenv("OUTPUT_DIR");
+    if (argc > 2) {
+        output_folder = argv[2];
+    }
+    if (!output_folder) {
+        fprintf(stderr, "OUTPUT_DIR not set and no output folder given\n");
+        return 1;
+    }
     struct stat st = {0};
-    if (stat("output", &st) == -1) mkdir("output", 0755);
-    if (stat(output_folder, &st) == -1) mkdir(output_folder, 0755);
+    if (stat(output_folder, &st) == -1) {
+        if (mkdir(output_folder, 0755) != 0) {
+            perror("Failed to create output directory");
+            return 1;
+        }
+    }
 
     DIR *dir = opendir(input_folder);
     if (!dir) {
@@ -117,7 +136,6 @@ int main() {
 
     struct dirent *entry;
 
-    // CUDA event-based timing
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
@@ -140,6 +158,8 @@ int main() {
     float total_time_ms = 0;
     cudaEventElapsedTime(&total_time_ms, start, stop);
     printf("All images processed in %.3f milliseconds (GPU + host).\n", total_time_ms);
+    printf("Total processing time: %f seconds\n", total_time_ms / 1000.0);
+
 
     return 0;
 }

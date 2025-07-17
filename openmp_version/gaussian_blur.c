@@ -33,7 +33,7 @@ uint8_t* gaussian_blur_rgb(uint8_t *input, int width, int height) {
     uint8_t *output = malloc(width * height * 3);
     if (!output) return NULL;
 
-    #pragma omp parallel for
+    #pragma omp parallel for collapse(2)
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             int sum_r = 0;
@@ -83,37 +83,47 @@ uint8_t* gaussian_blur_rgb(uint8_t *input, int width, int height) {
     return output;
 }
 
-int main() {
-    const char *input_folder = "../images/testing_images";
+int main(int argc, char *argv[]) {
+    int num_threads = 8; 
+    omp_set_num_threads(num_threads);
+    printf("Using %d threads\n", num_threads);
 
-    // Create output directory if it doesn't exist
+    // const char *input_folder = "../images/testing_images";
+    const char *input_folder = getenv("INPUT_DIR");
+    if (argc > 1) {
+        input_folder = argv[1];
+    }
+    if (!input_folder) {
+        fprintf(stderr, "INPUT_DIR not set and no input folder given\n");
+        return 1;
+    }
+
+    const char *output_folder = getenv("OUTPUT_DIR");
+    if (argc > 2) {
+        output_folder = argv[2];
+    }
+    if (!output_folder) {
+        fprintf(stderr, "OUTPUT_DIR not set and no output folder given\n");
+        return 1;
+    }
     struct stat st = {0};
-    if (stat("output", &st) == -1) {
-        if (mkdir("output", 0755) != 0) {
+    if (stat(output_folder, &st) == -1) {
+        if (mkdir(output_folder, 0755) != 0) {
             perror("Failed to create output directory");
             return 1;
         }
     }
-    if (stat("output/gaussian", &st) == -1) {
-        if (mkdir("output/gaussian", 0755) != 0) {
-            perror("Failed to create output/gaussian directory");
-            return 1;
-        }
-    }
-
     DIR *dir = opendir(input_folder);
     if (!dir) {
         perror("Failed to open input directory");
         return 1;
     }
 
-    // Collect entries first
     struct dirent *entries[1024];
     int entry_count = 0;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL && entry_count < 1024) {
         if (entry->d_type == DT_REG && has_image_extension(entry->d_name)) {
-            // Copy entry to array
             entries[entry_count] = malloc(sizeof(struct dirent));
             if (entries[entry_count]) {
                 memcpy(entries[entry_count], entry, sizeof(struct dirent));
@@ -150,7 +160,7 @@ int main() {
         }
 
         char output_path[512];
-        snprintf(output_path, sizeof(output_path), "output/gaussian/gray_%s", entries[i]->d_name);
+        snprintf(output_path, sizeof(output_path), "%s/gray_%s",output_folder, entries[i]->d_name);
 
         if (!stbi_write_png(output_path, width, height, 1, gray_img, width)) {
             printf("Failed to write image: %s\n", output_path);

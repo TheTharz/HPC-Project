@@ -21,7 +21,7 @@ int has_image_extension(const char *filename) {
     return strcmp(ext, ".jpg") == 0 || strcmp(ext, ".png") == 0;
 }
 
-__constant__ int d_kernel[3][3];  // kernel in constant memory
+__constant__ int d_kernel[3][3];  
 
 __global__ void gaussian_blur_kernel(uint8_t *input, uint8_t *output, int width, int height) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -113,14 +113,33 @@ int process_image_cuda(const char *input_path, const char *output_path) {
     return 0;
 }
 
-int main() {
-    const char *input_folder = "../images/testing_images";
-    const char *output_folder = "output/gaussian";
-
+int main(int argc, char *argv[]) {
+    // const char *input_folder = "../images/testing_images";
+    const char *input_folder = getenv("INPUT_DIR");
+    if (argc > 1) {
+        input_folder = argv[1];
+    }
+    if (!input_folder) {
+        fprintf(stderr, "INPUT_DIR not set and no input folder given\n");
+        return 1;
+    }
+    // const char *output_folder = "output/gaussian";
+    const char *output_folder = getenv("OUTPUT_DIR");
+    if (argc > 2) {
+        output_folder = argv[2];
+    }
+    if (!output_folder) {
+        fprintf(stderr, "OUTPUT_DIR not set and no output folder given\n");
+        return 1;
+    }
     struct stat st = {0};
-    if (stat("output", &st) == -1) mkdir("output", 0755);
-    if (stat("output/gaussian", &st) == -1) mkdir("output/gaussian", 0755);
-
+    if (stat(output_folder, &st) == -1) {
+        if (mkdir(output_folder, 0755) != 0) {
+            perror("Failed to create output directory");
+            return 1;
+        }
+    }
+    
     DIR *dir = opendir(input_folder);
     if (!dir) {
         perror("Failed to open input directory");
@@ -128,7 +147,7 @@ int main() {
     }
 
     struct dirent *entry;
-    clock_t start = clock();
+    double total_start_time = omp_get_wtime();
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_type == DT_REG && has_image_extension(entry->d_name)) {
             char input_path[512], output_path[512];
@@ -138,10 +157,9 @@ int main() {
         }
     }
     closedir(dir);
-    clock_t end = clock();
+    double total_end_time = omp_get_wtime(); // Start total timer
 
-    double total_time = ((double)(end - start)) / CLOCKS_PER_SEC;
-    printf("Total processing time: %.2f seconds\n", total_time);
+    printf("Total processing time: %f seconds\n", total_end_time - total_start_time);
 
     return 0;
 }

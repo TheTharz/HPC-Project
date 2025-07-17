@@ -21,7 +21,7 @@ int has_image_extension(const char *filename) {
     if (!ext) return 0;
     return strcmp(ext, ".jpg") == 0 || strcmp(ext, ".png") == 0;
 }
-// Apply Laplacian filter to a grayscale image
+
 uint8_t* apply_laplacian_filter(uint8_t *img, int width, int height) {
     int kernel[3][3] = {
         {  0, -1,  0 },
@@ -49,7 +49,6 @@ uint8_t* apply_laplacian_filter(uint8_t *img, int width, int height) {
                 }
             }
 
-            // Clamp to [0, 255]
             if (sum < 0) sum = 0;
             if (sum > 255) sum = 255;
 
@@ -60,20 +59,29 @@ uint8_t* apply_laplacian_filter(uint8_t *img, int width, int height) {
     return output;
 }
 
-int main() {
-    const char *input_folder = "../images/testing_images";
-
-    // Create output directory if it doesn't exist
-    struct stat st = {0};
-    if (stat("output", &st) == -1) {
-        if (mkdir("output", 0755) != 0) {
-            perror("Failed to create output directory");
-            return 1;
-        }
+int main(int argc, char *argv[]) {
+    // const char *input_folder = "../images/testing_images";
+    const char *input_folder = getenv("INPUT_DIR");
+    if (argc > 1) {
+        input_folder = argv[1];
     }
-    if (stat("output/laplacian", &st) == -1) {
-        if (mkdir("output/laplacian", 0755) != 0) {
-            perror("Failed to create output/laplacian directory");
+    if (!input_folder) {
+        fprintf(stderr, "INPUT_DIR not set and no input folder given\n");
+        return 1;
+    }
+
+    const char *output_folder = getenv("OUTPUT_DIR");
+    if (argc > 2) {
+        output_folder = argv[2];
+    }
+    if (!output_folder) {
+        fprintf(stderr, "OUTPUT_DIR not set and no output folder given\n");
+        return 1;
+    }
+    struct stat st = {0};
+    if (stat(output_folder, &st) == -1) {
+        if (mkdir(output_folder, 0755) != 0) {
+            perror("Failed to create output directory");
             return 1;
         }
     }
@@ -84,13 +92,11 @@ int main() {
         return 1;
     }
 
-    // Collect entries first
     struct dirent *entries[1024];
     int entry_count = 0;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL && entry_count < 1024) {
         if (entry->d_type == DT_REG && has_image_extension(entry->d_name)) {
-            // Copy entry to array
             entries[entry_count] = malloc(sizeof(struct dirent));
             if (entries[entry_count]) {
                 memcpy(entries[entry_count], entry, sizeof(struct dirent));
@@ -126,7 +132,7 @@ int main() {
         }
 
         char output_path[512];
-        snprintf(output_path, sizeof(output_path), "output/laplacian/laplacian_%s", entries[i]->d_name);
+        snprintf(output_path, sizeof(output_path), "%s/laplacian_%s", output_folder, entries[i]->d_name);
 
         if (!stbi_write_png(output_path, width, height, 1, gray_img, width)) {
             printf("Failed to write image: %s\n", output_path);
@@ -144,3 +150,4 @@ int main() {
 
     return 0;
 }
+

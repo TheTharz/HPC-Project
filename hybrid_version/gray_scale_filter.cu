@@ -71,20 +71,29 @@ void process_image_cuda(const char *input_path, const char *output_path) {
     cudaFree(d_output);
 }
 
-int main() {
-    const char *input_folder = "../images/testing_images";
-    const char *output_folder = "output/grayscale";
-
-    struct stat st = {0};
-    if (stat("output", &st) == -1) {
-        if (mkdir("output", 0755) != 0) {
-            perror("Failed to create output directory");
-            return 1;
-        }
+int main(int argc, char *argv[]) {
+    // const char *input_folder = "../images/testing_images";
+    const char *input_folder = getenv("INPUT_DIR");
+    if (argc > 1) {
+        input_folder = argv[1];
     }
-    if (stat("output/grayscale", &st) == -1) {
-        if (mkdir("output/grayscale", 0755) != 0) {
-            perror("Failed to create output/grayscale directory");
+    if (!input_folder) {
+        fprintf(stderr, "INPUT_DIR not set and no input folder given\n");
+        return 1;
+    }
+    
+    const char *output_folder = getenv("OUTPUT_DIR");
+    if (argc > 2) {
+        output_folder = argv[2];
+    }
+    if (!output_folder) {
+        fprintf(stderr, "OUTPUT_DIR not set and no output folder given\n");
+        return 1;
+    }
+    struct stat st = {0};
+    if (stat(output_folder, &st) == -1) {
+        if (mkdir(output_folder, 0755) != 0) {
+            perror("Failed to create output directory");
             return 1;
         }
     }
@@ -122,6 +131,7 @@ int main() {
 
     double end_time = omp_get_wtime();
     printf("Total processing time: %.3f seconds with %d threads\n", end_time - start_time, omp_get_max_threads());
+    printf("Total processing time: %f seconds\n", end_time - start_time);
 
     return 0;
 }

@@ -41,20 +41,29 @@ uint8_t* convert_to_grayscale(unsigned char *img, int width, int height) {
     return gray_img;
 }
 
-int main() {
-    const char *input_folder = "../images/testing_images";
-
-    // Create output directory if it doesn't exist
-    struct stat st = {0};
-    if (stat("output", &st) == -1) {
-        if (mkdir("output", 0755) != 0) {
-            perror("Failed to create output directory");
-            return 1;
-        }
+int main(int argc, char *argv[]) {
+    // const char *input_folder = "../images/testing_images";
+    const char *input_folder = getenv("INPUT_DIR");
+    if (argc > 1) {
+        input_folder = argv[1];
     }
-    if (stat("output/grayscale", &st) == -1) {
-        if (mkdir("output/grayscale", 0755) != 0) {
-            perror("Failed to create output/grayscale directory");
+    if (!input_folder) {
+        fprintf(stderr, "INPUT_DIR not set and no input folder given\n");
+        return 1;
+    }
+
+    const char *output_folder = getenv("OUTPUT_DIR");
+    if (argc > 2) {
+        output_folder = argv[2];
+    }
+    if (!output_folder) {
+        fprintf(stderr, "OUTPUT_DIR not set and no output folder given\n");
+        return 1;
+    }
+    struct stat st = {0};
+    if (stat(output_folder, &st) == -1) {
+        if (mkdir(output_folder, 0755) != 0) {
+            perror("Failed to create output directory");
             return 1;
         }
     }
@@ -65,13 +74,11 @@ int main() {
         return 1;
     }
 
-    // Collect entries first
     struct dirent *entries[1024];
     int entry_count = 0;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL && entry_count < 1024) {
         if (entry->d_type == DT_REG && has_image_extension(entry->d_name)) {
-            // Copy entry to array
             entries[entry_count] = malloc(sizeof(struct dirent));
             if (entries[entry_count]) {
                 memcpy(entries[entry_count], entry, sizeof(struct dirent));
@@ -107,14 +114,23 @@ int main() {
         }
 
         char output_path[512];
-        snprintf(output_path, sizeof(output_path), "output/grayscale/gray_%s", entries[i]->d_name);
+        snprintf(output_path, sizeof(output_path), "%s/gray_%s", output_folder, entries[i]->d_name);
+        output_path[strlen(output_path) - 4] = '\0'; // Remove extension
+        char *output_path_new = malloc(strlen(output_path) + 5);
+        if (!output_path_new) {
+            printf("Memory allocation failed for output path\n");
+            free(entries[i]);
+            continue;
+        }
+        snprintf(output_path_new, strlen(output_path) + 5, "%s.png", output_path);
 
-        if (!stbi_write_png(output_path, width, height, 1, gray_img, width)) {
-            printf("Failed to write image: %s\n", output_path);
+        if (!stbi_write_png(output_path_new, width, height, 1, gray_img, width)) {
+            printf("Failed to write image: %s\n", output_path_new);
         } else {
             printf("Processed %s in %f seconds\n", entries[i]->d_name, end_time - start_time);
         }
 
+        free(output_path_new);
         stbi_image_free(img);
         free(gray_img);
         free(entries[i]);

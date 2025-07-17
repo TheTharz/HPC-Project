@@ -60,7 +60,6 @@ uint8_t* gaussian_blur_rgb(uint8_t *input, int width, int height) {
                 }
             }
 
-            // Normalize and clamp the result
             int val_r = sum_r / weight_sum;
             int val_g = sum_g / weight_sum;
             int val_b = sum_b / weight_sum;
@@ -81,20 +80,29 @@ uint8_t* gaussian_blur_rgb(uint8_t *input, int width, int height) {
     return output;
 }
 
-int main() {
-    const char *input_folder = "../images/testing_images";
-
-    // Create output directory if it doesn't exist
-    struct stat st = {0};
-    if (stat("output", &st) == -1) {
-        if (mkdir("output", 0755) != 0) {
-            perror("Failed to create output directory");
-            return 1;
-        }
+int main(int argc, char *argv[]) {
+    // const char *input_folder = "../images/testing_images";
+    const char *input_folder = getenv("INPUT_DIR");
+    if (argc > 1) {
+        input_folder = argv[1];
     }
-    if (stat("output/gaussian", &st) == -1) {
-        if (mkdir("output/gaussian", 0755) != 0) {
-            perror("Failed to create output/gaussian directory");
+    if (!input_folder) {
+        fprintf(stderr, "INPUT_DIR not set and no input folder given\n");
+        return 1;
+    }
+
+    const char *output_folder = getenv("OUTPUT_DIR");
+    if (argc > 2) {
+        output_folder = argv[2];
+    }
+    if (!output_folder) {
+        fprintf(stderr, "OUTPUT_DIR not set and no output folder given\n");
+        return 1;
+    }
+    struct stat st = {0};
+    if (stat(output_folder, &st) == -1) {
+        if (mkdir(output_folder, 0755) != 0) {
+            perror("Failed to create output directory");
             return 1;
         }
     }
@@ -147,7 +155,7 @@ int main() {
         }
 
         char output_path[512];
-        snprintf(output_path, sizeof(output_path), "output/gaussian/gray_%s", entries[i]->d_name);
+        snprintf(output_path, sizeof(output_path), "%s/gray_%s", output_folder, entries[i]->d_name);
 
         if (!stbi_write_png(output_path, width, height, 3, gray_img, width*3)) {
             printf("Failed to write image: %s\n", output_path);

@@ -82,7 +82,7 @@ int has_image_extension(const char *filename) {
 }
 
 int main(int argc, char *argv[]) {
-    double total_start_time = omp_get_wtime(); // Start total timer
+    double total_start_time = omp_get_wtime();
 
     // const char *input_folder = "../images/testing_images";
     const char *input_folder = getenv("INPUT_DIR");
@@ -116,17 +116,31 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // Step 1: Load all image file names into a list
+    struct dirent *entries[1024];
+    int count = 0;
     struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_type != DT_REG || !has_image_extension(entry->d_name)) continue;
+    while ((entry = readdir(dir)) != NULL && count < 1024) {
+        if (entry->d_type == DT_REG && has_image_extension(entry->d_name)) {
+            entries[count] = (struct dirent*) malloc(sizeof(struct dirent));
+            memcpy(entries[count], entry, sizeof(struct dirent));
+            count++;
+        }
+    }
+    closedir(dir);
 
-        char input_path[512];
-        snprintf(input_path, sizeof(input_path), "%s/%s", input_folder, entry->d_name);
+    // Step 2: Parallelize image processing
+    #pragma omp parallel for
+    for (int i = 0; i < count; i++) {
+        char input_path[512], output_path[512];
+        snprintf(input_path, sizeof(input_path), "%s/%s", input_folder, entries[i]->d_name);
 
         int width, height, channels;
         unsigned char *img = stbi_load(input_path, &width, &height, &channels, 1);
         if (!img) {
+            #pragma omp critical
             fprintf(stderr, "Failed to load %s\n", input_path);
+            free(entries[i]);
             continue;
         }
 
@@ -134,22 +148,21 @@ int main(int argc, char *argv[]) {
         uint8_t *sobel = sobel_gpu(img, width, height);
         double end = omp_get_wtime();
 
-        char output_path[512];
-        snprintf(output_path, sizeof(output_path), "%s/sobel_%s",output_folder, entry->d_name);
-        stbi_write_png(output_path, width, height, 1, sobel, width);
-
-        printf("Processed %s in %f seconds (CUDA)\n", entry->d_name, end - start);
+        snprintf(output_path, sizeof(output_path), "%s/sobel_%s",output_folder, entries[i]->d_name);
+        if (!stbi_write_png(output_path, width, height, 1, sobel, width)) {
+            #pragma omp critical
+            fprintf(stderr, "Failed to write %s\n", output_path);
+        } else {
+            #pragma omp critical
+            printf("Thread %d: Processed %s in %f seconds (CUDA)\n", omp_get_thread_num(), entries[i]->d_name, end - start);
+        }
 
         stbi_image_free(img);
         free(sobel);
+        free(entries[i]);
     }
 
-    closedir(dir);
-    double total_end_time = omp_get_wtime(); // Start total timer
-
-    printf("Total time: %f seconds\n", total_end_time - total_start_time);
+    double total_end_time = omp_get_wtime();
     printf("Total processing time: %f seconds\n", total_end_time - total_start_time);
-
-
     return 0;
 }
