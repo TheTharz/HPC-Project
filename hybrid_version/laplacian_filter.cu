@@ -14,7 +14,7 @@
 
 #include <omp.h>
 
-__constant__ int d_kernel[3][3];  // Laplacian kernel in constant memory
+__constant__ int d_kernel[3][3];  
 
 int has_image_extension(const char *filename) {
     const char *ext = strrchr(filename, '.');

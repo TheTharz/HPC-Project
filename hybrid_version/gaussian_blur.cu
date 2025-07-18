@@ -140,7 +140,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // Collect image filenames
     DIR *dir = opendir(input_folder);
     if (!dir) {
         perror("Failed to open input directory");

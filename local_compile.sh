@@ -44,3 +44,6 @@ for file in gray_scale_filter gaussian_blur sobel laplacian_filter; do
   nvcc -Xcompiler -fopenmp -o "$dst" "$file.cu"
 done
 
+
+
+nvcc -Xcompiler -fopenmp -o sobel sobel.cu -lcuda -lcudart

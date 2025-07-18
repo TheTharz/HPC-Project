@@ -16,6 +16,7 @@
 #include <omp.h>
 
 #define BLOCK_SIZE 16
+#define NUM_STREAMS 4  
 
 __global__ void sobel_kernel(const uint8_t* input, uint8_t* output, int width, int height) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -56,22 +57,33 @@ __global__ void sobel_kernel(const uint8_t* input, uint8_t* output, int width, i
     output[y * width + x] = (uint8_t)magnitude;
 }
 
-uint8_t* sobel_gpu(uint8_t* input, int width, int height) {
+uint8_t* sobel_gpu_async(uint8_t* input, int width, int height, cudaStream_t stream) {
     size_t img_size = width * height * sizeof(uint8_t);
-    uint8_t *d_input, *d_output, *output = (uint8_t*)malloc(img_size);
+    uint8_t *d_input = NULL, *d_output = NULL;
+    uint8_t *output = (uint8_t*)malloc(img_size);
+    if (!output) return NULL;
 
     cudaMalloc((void**)&d_input, img_size);
     cudaMalloc((void**)&d_output, img_size);
-    cudaMemcpy(d_input, input, img_size, cudaMemcpyHostToDevice);
+
+    cudaMemcpyAsync(d_input, input, img_size, cudaMemcpyHostToDevice, stream);
 
     dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
     dim3 gridDim((width + BLOCK_SIZE - 1) / BLOCK_SIZE, (height + BLOCK_SIZE - 1) / BLOCK_SIZE);
-    sobel_kernel<<<gridDim, blockDim>>>(d_input, d_output, width, height);
-    cudaDeviceSynchronize();
 
-    cudaMemcpy(output, d_output, img_size, cudaMemcpyDeviceToHost);
-    cudaFree(d_input);
-    cudaFree(d_output);
+    sobel_kernel<<<gridDim, blockDim, 0, stream>>>(d_input, d_output, width, height);
+
+    cudaMemcpyAsync(output, d_output, img_size, cudaMemcpyDeviceToHost, stream);
+
+    // Free device memory after stream finishes
+    cudaStreamAddCallback(stream,
+        [](cudaStream_t stream, cudaError_t status, void* userData) {
+            uint8_t **devPtrs = (uint8_t**)userData;
+            cudaFree(devPtrs[0]);
+            cudaFree(devPtrs[1]);
+            free(devPtrs);
+        }, 
+        malloc(sizeof(uint8_t*) * 2), 0);
 
     return output;
 }
@@ -81,27 +93,30 @@ int has_image_extension(const char *filename) {
     return ext && (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".png") == 0);
 }
 
+typedef struct {
+    char output_path[512];
+    int width;
+    int height;
+    uint8_t *output_buffer;
+} ImageResult;
+
 int main(int argc, char *argv[]) {
     double total_start_time = omp_get_wtime();
 
-    // const char *input_folder = "../images/testing_images";
     const char *input_folder = getenv("INPUT_DIR");
-    if (argc > 1) {
-        input_folder = argv[1];
-    }
+    if (argc > 1) input_folder = argv[1];
     if (!input_folder) {
         fprintf(stderr, "INPUT_DIR not set and no input folder given\n");
         return 1;
     }
 
     const char *output_folder = getenv("OUTPUT_DIR");
-    if (argc > 2) {
-        output_folder = argv[2];
-    }
+    if (argc > 2) output_folder = argv[2];
     if (!output_folder) {
         fprintf(stderr, "OUTPUT_DIR not set and no output folder given\n");
         return 1;
     }
+
     struct stat st = {0};
     if (stat(output_folder, &st) == -1) {
         if (mkdir(output_folder, 0755) != 0) {
@@ -116,51 +131,73 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    cudaStream_t streams[NUM_STREAMS];
+    for (int i = 0; i < NUM_STREAMS; i++) {
+        cudaStreamCreate(&streams[i]);
+    }
+
     struct dirent *entries[1024];
     int count = 0;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL && count < 1024) {
         if (entry->d_type == DT_REG && has_image_extension(entry->d_name)) {
-            entries[count] = (struct dirent*) malloc(sizeof(struct dirent));
+            entries[count] = (struct dirent*)malloc(sizeof(struct dirent));
             memcpy(entries[count], entry, sizeof(struct dirent));
             count++;
         }
     }
     closedir(dir);
 
-    #pragma omp parallel for
+    ImageResult results[1024] = {0};
+
     for (int i = 0; i < count; i++) {
+        int stream_id = i % NUM_STREAMS;
+
         char input_path[512], output_path[512];
         snprintf(input_path, sizeof(input_path), "%s/%s", input_folder, entries[i]->d_name);
+        snprintf(output_path, sizeof(output_path), "%s/sobel_%s", output_folder, entries[i]->d_name);
 
         int width, height, channels;
         unsigned char *img = stbi_load(input_path, &width, &height, &channels, 1);
         if (!img) {
-            #pragma omp critical
             fprintf(stderr, "Failed to load %s\n", input_path);
             free(entries[i]);
             continue;
         }
 
-        double start = omp_get_wtime();
-        uint8_t *sobel = sobel_gpu(img, width, height);
-        double end = omp_get_wtime();
-
-        snprintf(output_path, sizeof(output_path), "%s/sobel_%s",output_folder, entries[i]->d_name);
-        if (!stbi_write_png(output_path, width, height, 1, sobel, width)) {
-            #pragma omp critical
-            fprintf(stderr, "Failed to write %s\n", output_path);
-        } else {
-            #pragma omp critical
-            printf("Thread %d: Processed %s in %f seconds (CUDA)\n", omp_get_thread_num(), entries[i]->d_name, end - start);
-        }
-
+        uint8_t *sobel = sobel_gpu_async(img, width, height, streams[stream_id]);
         stbi_image_free(img);
-        free(sobel);
+
+        strncpy(results[i].output_path, output_path, sizeof(results[i].output_path) - 1);
+        results[i].width = width;
+        results[i].height = height;
+        results[i].output_buffer = sobel;
+
         free(entries[i]);
     }
 
+    for (int i = 0; i < NUM_STREAMS; i++) {
+        cudaStreamSynchronize(streams[i]);
+    }
+
+    // Write images to disk
+    for (int i = 0; i < count; i++) {
+        if (results[i].output_buffer) {
+            int stride_in_bytes = results[i].width * 1;
+            if (!stbi_write_png(results[i].output_path, results[i].width, results[i].height, 1, results[i].output_buffer, stride_in_bytes)) {
+                fprintf(stderr, "Failed to save %s\n", results[i].output_path);
+            }
+            free(results[i].output_buffer);
+        }
+    }
+
+    // Destroy streams
+    for (int i = 0; i < NUM_STREAMS; i++) {
+        cudaStreamDestroy(streams[i]);
+    }
+
     double total_end_time = omp_get_wtime();
-    printf("Total processing time: %f seconds\n", total_end_time - total_start_time);
+    printf("Total time: %f seconds\n", total_end_time - total_start_time);
+
     return 0;
 }

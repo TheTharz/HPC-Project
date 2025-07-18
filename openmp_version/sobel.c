@@ -22,7 +22,6 @@ int has_image_extension(const char *filename) {
     return strcmp(ext, ".jpg") == 0 || strcmp(ext, ".png") == 0;
 }
 
-// Apply sobel filter to a grayscale image
 uint8_t* apply_sobel_filter(uint8_t *input, int width, int height) {
     int Gx[3][3] = {
         {-1, 0, 1},
@@ -179,7 +178,6 @@ int main(int argc, char *argv[]) {
         free(gray_img);
     }
 
-    // Free entries after parallel section
     for (int i = 0; i < entry_count; i++) {
         free(entries[i]);
     }
